@@ -1,0 +1,804 @@
+/* ==================================
+   KARIX FRONTEND
+   Main stylesheet
+================================== */
+
+:root {
+    --navy: #172c3b;
+    --navy-light: #243f50;
+    --accent: #d5a64b;
+    --background: #ffffff;
+    --surface: #f5f7f8;
+    --text: #172c3b;
+    --muted: #6b7881;
+    --border: #e5e9ec;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--background);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* NAVIGATION */
+
+.navbar {
+    height: 76px;
+    padding: 0 8%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: white;
+}
+
+.logo {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    color: var(--navy);
+}
+
+.logo span {
+    color: var(--accent);
+}
+
+.navbar nav {
+    display: flex;
+    gap: 32px;
+}
+
+.navbar nav a {
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.navbar nav a:hover {
+    color: var(--navy);
+}
+
+.nav-button {
+    background: var(--navy);
+    color: white;
+    padding: 11px 20px;
+    border-radius: 7px;
+    font-size: 13px;
+}
+
+/* HERO */
+
+.hero {
+    background: var(--navy);
+    color: white;
+    padding: 100px 8% 110px;
+}
+
+.hero-content {
+    max-width: 760px;
+    margin: auto;
+    text-align: center;
+}
+
+.eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 16px;
+}
+
+.hero h1 {
+    font-size: clamp(38px, 6vw, 65px);
+    line-height: 1.12;
+    letter-spacing: -2px;
+    margin-bottom: 22px;
+}
+
+.hero h1 span {
+    color: var(--accent);
+}
+
+.hero-description {
+    max-width: 570px;
+    margin: auto;
+    color: #d2dce2;
+    font-size: 16px;
+}
+
+/* SEARCH */
+
+.search-box {
+    margin: 35px auto 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 9px 8px 18px;
+    background: white;
+    border-radius: 10px;
+    max-width: 680px;
+    color: var(--muted);
+}
+
+.search-box span {
+    font-size: 25px;
+}
+
+.search-box input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.search-box button {
+    background: var(--accent);
+    color: var(--navy);
+    border: none;
+    border-radius: 7px;
+    padding: 13px 23px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.search-box button:hover {
+    opacity: 0.9;
+}
+
+.search-results {
+    max-width: 680px;
+    margin: 18px auto 0;
+    padding: 18px 18px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    text-align: left;
+}
+
+.search-results-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #ebcb8b;
+    margin-bottom: 10px;
+}
+
+.search-results-list {
+    display: grid;
+    gap: 10px;
+}
+
+.search-result-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px 14px;
+}
+
+.search-result-tag {
+    display: inline-block;
+    width: fit-content;
+    background: rgba(213, 166, 75, 0.15);
+    color: #f7d993;
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.search-result-item strong {
+    color: white;
+    font-size: 15px;
+}
+
+.search-result-item small {
+    color: #d7e1e9;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.search-empty {
+    color: #e2e9ee;
+    font-size: 13px;
+}
+
+.search-hint {
+    font-size: 12px;
+    color: #b7c5ce;
+    margin-top: 14px;
+}
+
+/* STREET SECTION */
+
+.streets-section {
+    padding: 85px 8%;
+    max-width: 1500px;
+    margin: auto;
+}
+
+.section-heading {
+    margin-bottom: 35px;
+}
+
+.section-heading h2,
+.about-section h2,
+.contribute-section h2 {
+    font-size: clamp(27px, 4vw, 38px);
+    letter-spacing: -1px;
+    line-height: 1.2;
+}
+
+.section-heading p {
+    color: var(--muted);
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.street-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.street-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 25px;
+    background: white;
+    transition: 0.2s ease;
+}
+
+.street-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+}
+
+.street-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: var(--surface);
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 17px;
+}
+
+.street-card h3 {
+    font-size: 20px;
+    margin-bottom: 7px;
+}
+
+.street-card p {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.street-card .explore-link {
+    display: inline-block;
+    margin-top: 18px;
+    font-size: 13px;
+    color: var(--navy);
+    font-weight: 700;
+}
+
+.empty-message {
+    padding: 30px 0;
+    text-align: center;
+    color: var(--muted);
+}
+
+/* ABOUT */
+
+.about-section {
+    padding: 85px 8%;
+    background: var(--surface);
+    text-align: center;
+}
+
+.about-section h2 {
+    max-width: 750px;
+    margin: auto;
+}
+
+.about-section > p:last-child {
+    max-width: 650px;
+    margin: 20px auto 0;
+    color: var(--muted);
+}
+
+/* CONTRIBUTOR */
+
+.contribute-section {
+    padding: 70px 8%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+}
+
+.contribute-section p:not(.eyebrow) {
+    color: var(--muted);
+    margin-top: 12px;
+    max-width: 570px;
+}
+
+.contribute-button {
+    background: var(--navy);
+    color: white;
+    padding: 15px 23px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* FOOTER */
+
+footer {
+    background: var(--navy);
+    color: white;
+    padding: 35px 8%;
+    text-align: center;
+}
+
+footer .logo {
+    color: white;
+}
+
+footer p {
+    color: #c4d0d7;
+    margin: 10px 0;
+    font-size: 13px;
+}
+
+footer small {
+    color: #94a6b1;
+    font-size: 11px;
+}
+
+/* RESPONSIVE DESIGN */
+
+@media (max-width: 800px) {
+
+    .navbar {
+        padding: 0 5%;
+    }
+
+    .navbar nav {
+        gap: 14px;
+    }
+
+    .street-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hero {
+        padding: 75px 5%;
+    }
+
+    .streets-section {
+        padding: 65px 5%;
+    }
+}
+
+@media (max-width: 560px) {
+
+    .navbar {
+        height: 65px;
+    }
+
+    .navbar nav {
+        display: none;
+    }
+
+    .nav-button {
+        padding: 9px 13px;
+        font-size: 11px;
+    }
+
+    .hero h1 {
+        font-size: 42px;
+    }
+
+    .search-box {
+        gap: 7px;
+        padding-left: 12px;
+    }
+
+    .search-box button {
+        padding: 12px;
+        font-size: 12px;
+    }
+
+    .street-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .contribute-section {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+}
+
+/* KARIX AUTHENTICATION */
+
+.auth-section {
+    padding: 60px 20px;
+    background: #f5f6f8;
+}
+
+.auth-card {
+    position: relative;
+    max-width: 460px;
+    margin: auto;
+    padding: 35px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+}
+
+.auth-card h2 {
+    margin: 12px 0;
+}
+
+.auth-card form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.auth-card label {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.auth-card input {
+    width: 100%;
+    padding: 13px;
+    border: 1px solid #d8dce3;
+    border-radius: 7px;
+    font: inherit;
+}
+
+.auth-card form button,
+#logoutButton {
+    padding: 14px;
+    margin-top: 10px;
+    background: #14243a;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font: inherit;
+}
+
+.auth-close {
+    position: absolute;
+    top: 12px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+}
+
+.auth-switch {
+    margin-top: 22px;
+    font-size: 14px;
+}
+
+.auth-switch button {
+    border: none;
+    background: none;
+    color: #b68b37;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#authMessage {
+    margin-top: 18px;
+    font-size: 14px;
+}
+
+#accountStatus {
+    margin-top: 25px;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+@media (max-width: 560px) {
+    .auth-card {
+        padding: 25px 20px;
+    }
+}
+
+/* ==================================
+   KARIX STREET EXPLORER
+================================== */
+
+.street-explorer {
+    margin-top: 35px;
+    padding: 30px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: white;
+}
+
+.explorer-back {
+    border: none;
+    background: var(--surface);
+    color: var(--navy);
+    padding: 10px 15px;
+    border-radius: 7px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 28px;
+}
+
+.explorer-back:hover {
+    background: var(--border);
+}
+
+.explorer-eyebrow {
+    color: #a77a27;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.explorer-title {
+    font-size: clamp(30px, 5vw, 42px);
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+}
+
+.explorer-description {
+    color: var(--muted);
+    max-width: 700px;
+    font-size: 14px;
+}
+
+.explorer-status {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 6px 11px;
+    border-radius: 20px;
+    background: #f5f7f8;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.explorer-block {
+    margin-top: 38px;
+}
+
+.explorer-block h3 {
+    font-size: 20px;
+    margin-bottom: 15px;
+}
+
+.explorer-category-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+.explorer-category {
+    padding: 8px 13px;
+    border-radius: 7px;
+    background: #f5f7f8;
+    border: 1px solid var(--border);
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.explorer-product-grid,
+.explorer-business-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 13px;
+}
+
+.explorer-product,
+.explorer-business {
+    padding: 17px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+}
+
+.explorer-product strong,
+.explorer-business strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.explorer-product small,
+.explorer-business small {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.explorer-note,
+.explorer-empty {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 13px;
+    line-height: 1.6;
+}
+
+.explorer-access-block {
+    margin-top: 28px;
+}
+
+.explorer-access-list {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.explorer-access-point {
+    padding: 16px;
+    border: 1px solid #e4e8ec;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.explorer-access-point strong {
+    display: block;
+    margin-bottom: 7px;
+}
+
+.explorer-access-point p {
+    margin: 0 0 12px;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.explorer-map-container {
+    width: 100%;
+    height: 300px;
+    margin: 16px 0;
+    overflow: hidden;
+    border-radius: 14px;
+    background: #eef1f3;
+}
+
+.explorer-map-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.explorer-map-button {
+    padding: 9px 13px;
+    border: 1px solid #dce3e9;
+    border-radius: 8px;
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+.explorer-navigation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 13px;
+}
+
+.explorer-navigation-actions a {
+    display: inline-block;
+    padding: 10px 13px;
+    border-radius: 8px;
+    background: #203b52;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.explorer-navigation-actions a:hover {
+    opacity: 0.85;
+}
+
+.search-result-clickable {
+    cursor: pointer;
+}
+
+.search-result-clickable:hover {
+    border-color: var(--accent);
+}
+
+/* =================================
+   KARIX INTERACTIVE STREET MAP
+================================= */
+
+.map-section {
+    margin: 35px 0 45px;
+}
+
+.map-heading {
+    margin-bottom: 16px;
+}
+
+.map-heading h3 {
+    margin-bottom: 6px;
+}
+
+.map-heading p {
+    color: #777;
+    font-size: 14px;
+}
+
+.kariakoo-map {
+    width: 100%;
+    height: 480px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #eee;
+    z-index: 1;
+}
+
+@media (max-width: 600px) {
+    .kariakoo-map {
+        height: 380px;
+    }
+}
+
+@media (max-width: 560px) {
+    .street-explorer {
+        padding: 20px;
+    }
+
+    .explorer-product-grid,
+    .explorer-business-list {
+        grid-template-columns: 1fr;
+    }
+
+    .explorer-map-container {
+        height: 250px;
+    }
+
+    .explorer-navigation-actions {
+        flex-direction: column;
+    }
+
+    .explorer-navigation-actions a {
+        text-align: center;
+    }
+}
