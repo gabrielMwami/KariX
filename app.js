@@ -1621,6 +1621,253 @@ function setClaimMessage(message, isError = false) {
     claimFormMessage.style.color = isError ? "#8d2a2a" : "#203b52";
 }
 
+async function loadTraderProductCatalog() {
+    const { data, error } = await karixClient
+        .from("products")
+        .select("product_id, product_name, brand, model_number")
+        .eq("is_active", true)
+        .order("product_name")
+        .limit(500);
+
+    if (error) {
+        console.error("Trader catalogue load failed:", error);
+        traderProductCatalog = [];
+        return;
+    }
+    traderProductCatalog = data || [];
+}
+
+function traderInput(labelText, name, value, type) {
+    const label = document.createElement("label");
+    label.className = "trader-field";
+    label.appendChild(document.createTextNode(labelText));
+    const input = document.createElement("input");
+    input.type = type || "text";
+    input.name = name;
+    input.value = value == null ? "" : value;
+    if (input.type === "number") {
+        input.min = "0";
+        input.step = "any";
+    }
+    label.appendChild(input);
+    return label;
+}
+
+function traderSelect(labelText, name, options, selected) {
+    const label = document.createElement("label");
+    label.className = "trader-field";
+    label.appendChild(document.createTextNode(labelText));
+    const select = document.createElement("select");
+    select.name = name;
+    options.forEach(entry => {
+        const option = document.createElement("option");
+        option.value = entry[0];
+        option.textContent = entry[1];
+        select.appendChild(option);
+    });
+    select.value = selected;
+    label.appendChild(select);
+    return label;
+}
+
+async function renderTraderProductPanel(business, card) {
+    const section = document.createElement("section");
+    section.className = "trader-products-section";
+
+    const heading = document.createElement("h4");
+    heading.textContent = "Products and stock";
+    const intro = document.createElement("p");
+    intro.textContent = "Publish products from the KariX catalogue and update their stock and availability.";
+    const form = document.createElement("form");
+    form.className = "trader-product-add-form";
+
+    const catalogueOptions = traderProductCatalog.map(product => [
+        product.product_id,
+        [product.product_name, product.brand].filter(Boolean).join(" · ")
+    ]);
+    form.appendChild(traderSelect("Catalogue product", "product_id", catalogueOptions, catalogueOptions[0]?.[0] || ""));
+    form.appendChild(traderSelect("Selling type", "selling_type", [
+        ["retail", "Retail"], ["wholesale", "Wholesale"], ["both", "Wholesale and retail"]
+    ], "both"));
+    form.appendChild(traderInput("Minimum order quantity", "minimum_quantity", "1", "number"));
+    form.appendChild(traderInput("Unit (piece, box, carton etc.)", "unit", "piece"));
+    form.appendChild(traderSelect("Availability", "availability_status", [
+        ["available", "Available"], ["out_of_stock", "Out of stock"],
+        ["preorder", "Pre-order"], ["discontinued", "Discontinued"], ["unknown", "Unknown"]
+    ], "available"));
+    form.appendChild(traderInput("Quantity available (optional)", "quantity_available", "", "number"));
+
+    const descriptionLabel = document.createElement("label");
+    descriptionLabel.className = "trader-field";
+    descriptionLabel.appendChild(document.createTextNode("Listing description (optional)"));
+    const description = document.createElement("textarea");
+    description.name = "listing_description";
+    description.rows = 2;
+    description.maxLength = 1000;
+    descriptionLabel.appendChild(description);
+    form.appendChild(descriptionLabel);
+
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.textContent = "Publish product listing";
+    const message = document.createElement("p");
+    message.className = "trader-business-message";
+    message.setAttribute("role", "status");
+    form.append(submit, message);
+
+    const listingContainer = document.createElement("div");
+    listingContainer.className = "trader-listings-list";
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!catalogueOptions.length) {
+            message.textContent = "No active products are available in the KariX catalogue yet.";
+            return;
+        }
+        const minimum = Number(form.elements.minimum_quantity.value);
+        const quantityText = form.elements.quantity_available.value.trim();
+        const quantity = quantityText === "" ? null : Number(quantityText);
+        const unit = form.elements.unit.value.trim();
+        if (!Number.isFinite(minimum) || minimum <= 0 ||
+            (quantity !== null && (!Number.isFinite(quantity) || quantity < 0)) || !unit) {
+            message.textContent = "Enter a valid minimum quantity, unit and stock quantity.";
+            return;
+        }
+
+        submit.disabled = true;
+        message.textContent = "Publishing listing...";
+        try {
+            const productId = form.elements.product_id.value;
+            const { data: existing, error: lookupError } = await karixClient
+                .from("business_products")
+                .select("product_id")
+                .eq("business_id", business.business_id)
+                .eq("product_id", productId)
+                .maybeSingle();
+            if (lookupError) throw lookupError;
+            if (existing) throw new Error("This product is already listed. Update its existing listing below.");
+
+            const { error } = await karixClient.from("business_products").insert({
+                business_id: business.business_id,
+                product_id: productId,
+                selling_type: form.elements.selling_type.value,
+                minimum_quantity: minimum,
+                unit,
+                availability_status: form.elements.availability_status.value,
+                quantity_available: quantity,
+                listing_description: form.elements.listing_description.value.trim() || null,
+                listing_status: "active",
+                created_by: currentTraderUserId
+            });
+            if (error) throw error;
+            form.reset();
+            form.elements.minimum_quantity.value = "1";
+            form.elements.unit.value = "piece";
+            message.textContent = "Product listing published.";
+            await loadTraderProductListings(business.business_id, listingContainer);
+        } catch (error) {
+            console.error("Product listing publish failed:", error);
+            message.textContent = error.message || "Could not publish this listing.";
+        } finally {
+            submit.disabled = false;
+        }
+    });
+
+    section.append(heading, intro, form, listingContainer);
+    card.appendChild(section);
+    await loadTraderProductListings(business.business_id, listingContainer);
+}
+
+async function loadTraderProductListings(businessId, container) {
+    const { data, error } = await karixClient
+        .from("business_products")
+        .select("product_id, selling_type, minimum_quantity, unit, availability_status, quantity_available, listing_description, listing_status, products(product_name, brand)")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false });
+
+    container.replaceChildren();
+    if (error) {
+        console.error("Trader listings load failed:", error);
+        container.textContent = "Could not load listings. Apply the trader product-management migration first.";
+        return;
+    }
+    if (!data?.length) {
+        container.textContent = "No products listed for this business yet.";
+        return;
+    }
+
+    data.forEach(listing => {
+        const item = document.createElement("article");
+        item.className = "trader-listing-card";
+        const title = document.createElement("strong");
+        title.textContent = listing.products?.product_name || "Catalogue product";
+        const meta = document.createElement("p");
+        meta.textContent = [
+            listing.products?.brand,
+            listing.selling_type,
+            "Minimum " + listing.minimum_quantity + " " + listing.unit,
+            listing.quantity_available == null ? "Stock not specified" : "Stock: " + listing.quantity_available,
+            listing.availability_status,
+            listing.listing_status
+        ].filter(Boolean).join(" · ");
+
+        const edit = document.createElement("form");
+        edit.className = "trader-listing-edit-form";
+        edit.appendChild(traderSelect("Availability", "availability_status", [
+            ["available", "Available"], ["out_of_stock", "Out of stock"],
+            ["preorder", "Pre-order"], ["discontinued", "Discontinued"], ["unknown", "Unknown"]
+        ], listing.availability_status));
+        edit.appendChild(traderInput("Quantity available", "quantity_available", listing.quantity_available, "number"));
+        edit.appendChild(traderSelect("Listing status", "listing_status", [
+            ["active", "Published"], ["archived", "Archived"]
+        ], listing.listing_status === "archived" ? "archived" : "active"));
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.textContent = "Update stock";
+        const status = document.createElement("small");
+        edit.append(save, status);
+        edit.addEventListener("submit", async event => {
+            event.preventDefault();
+            const raw = edit.elements.quantity_available.value.trim();
+            const qty = raw === "" ? null : Number(raw);
+            if (qty !== null && (!Number.isFinite(qty) || qty < 0)) {
+                status.textContent = "Enter a valid stock quantity.";
+                return;
+            }
+            save.disabled = true;
+            status.textContent = "Updating...";
+            try {
+                const { error: updateError } = await karixClient
+                    .from("business_products")
+                    .update({
+                        availability_status: edit.elements.availability_status.value,
+                        quantity_available: qty,
+                        listing_status: edit.elements.listing_status.value
+                    })
+                    .eq("business_id", businessId)
+                    .eq("product_id", listing.product_id);
+                if (updateError) throw updateError;
+                status.textContent = "Stock updated.";
+                meta.textContent = [
+                    listing.products?.brand,
+                    listing.selling_type,
+                    "Minimum " + listing.minimum_quantity + " " + listing.unit,
+                    qty == null ? "Stock not specified" : "Stock: " + qty,
+                    edit.elements.availability_status.value,
+                    edit.elements.listing_status.value
+                ].filter(Boolean).join(" · ");
+            } catch (updateError) {
+                console.error("Stock update failed:", updateError);
+                status.textContent = updateError.message || "Could not update stock.";
+            } finally {
+                save.disabled = false;
+            }
+        });
+        item.append(title, meta, edit);
+        container.appendChild(item);
+    });
+}
+
 function renderTraderBusinesses(rows) {
     if (!traderBusinessList) return;
     traderBusinessList.replaceChildren();
