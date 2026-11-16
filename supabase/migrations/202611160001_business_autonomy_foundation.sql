@@ -73,6 +73,9 @@ CREATE INDEX IF NOT EXISTS business_claims_business_idx
   ON public.business_claims(business_id, status);
 CREATE INDEX IF NOT EXISTS business_claims_claimant_idx
   ON public.business_claims(claimant_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS business_claims_one_pending_per_business_idx
+  ON public.business_claims(business_id)
+  WHERE status = 'pending';
 
 -- A trader creating their own business receives owner membership automatically.
 -- Community-submitted businesses are published but remain unclaimed.
@@ -135,16 +138,7 @@ CREATE POLICY "Users can view their business memberships"
 ON public.business_memberships
 FOR SELECT
 TO authenticated
-USING (
-  user_id = (SELECT auth.uid())
-  OR EXISTS (
-    SELECT 1
-    FROM public.business_memberships viewer
-    WHERE viewer.business_id = business_memberships.business_id
-      AND viewer.user_id = (SELECT auth.uid())
-      AND viewer.status = 'active'
-  )
-);
+USING (user_id = (SELECT auth.uid()));
 
 -- Membership writes are intentionally not exposed to clients. Automatic owner grants
 -- happen through the trigger; claim approvals/membership invitations are privileged workflows.
