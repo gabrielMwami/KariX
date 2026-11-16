@@ -1949,6 +1949,9 @@ function renderTraderBusinesses(rows) {
 
         card.append(heading, role, form);
         traderBusinessList.appendChild(card);
+        renderTraderProductPanel(business, card).catch(error => {
+            console.error("Trader product panel failed:", error);
+        });
     });
 }
 
