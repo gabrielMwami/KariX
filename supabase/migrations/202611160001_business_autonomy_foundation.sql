@@ -264,4 +264,24 @@ USING (
   )
 );
 
+-- Active listings from newly published businesses are discoverable before verification.
+DROP POLICY IF EXISTS "Public can view active listings from verified businesses" ON public.business_products;
+CREATE POLICY "Public can view active listings from published businesses"
+ON public.business_products
+FOR SELECT
+TO anon, authenticated
+USING (
+  listing_status = 'active'
+  AND EXISTS (
+    SELECT 1 FROM public.businesses b
+    WHERE b.business_id = business_products.business_id
+      AND (b.is_published = true OR b.status = 'verified')
+  )
+  AND EXISTS (
+    SELECT 1 FROM public.products p
+    WHERE p.product_id = business_products.product_id
+      AND p.is_active = true
+  )
+);
+
 COMMIT;
