@@ -780,10 +780,12 @@ async function openStreetExplorer(street) {
                 business_name,
                 description,
                 shop_number,
-                floor
+                floor,
+                status,
+                claim_status
             `)
             .eq("street_id", street.id)
-            .eq("status", "verified")
+            .eq("is_published", true)
     ]);
 
     if (content.dataset.streetId && content.dataset.streetId !== String(street.id)) {
@@ -859,6 +861,13 @@ async function openStreetExplorer(street) {
             name.textContent = business.business_name;
 
             const details = document.createElement("small");
+            const publicationStatus = document.createElement("small");
+            publicationStatus.className = "business-publication-status";
+            publicationStatus.textContent = business.status === "verified"
+                ? "Verified business"
+                : business.claim_status === "claimed"
+                    ? "Trader-managed · Verification pending"
+                    : "Community submitted · Unclaimed";
 
             const location = [
                 business.shop_number ? "Shop " + business.shop_number : "",
@@ -869,7 +878,7 @@ async function openStreetExplorer(street) {
                 [location, business.description].filter(Boolean).join(" · ") ||
                 "Verified Kariakoo business";
 
-            card.append(name, details);
+            card.append(name, details, publicationStatus);
             businessList.appendChild(card);
         });
     }
@@ -1129,8 +1138,8 @@ async function runSupabaseSearch(query) {
     // 4. SEARCH VERIFIED BUSINESSES
     const businessRequest = karixClient
         .from("businesses")
-        .select("business_id, business_name, description")
-        .eq("status", "verified")
+        .select("business_id, business_name, description, status, claim_status")
+        .eq("is_published", true)
         .ilike("business_name", term)
         .limit(8);
 
@@ -1239,15 +1248,21 @@ async function runSupabaseSearch(query) {
         });
     }
 
-    // VERIFIED BUSINESSES ONLY
+    // PUBLISHED BUSINESSES
     if (businessResponse.error) {
         console.error("Business search:", businessResponse.error.message);
     } else {
         (businessResponse.data || []).forEach(business => {
             results.push({
-                type: "Verified Business",
+                type: "Business",
                 title: business.business_name,
-                description: business.description || "Verified Kariakoo business."
+                description: [
+                    business.description,
+                    business.status === "verified" ? "Verified"
+                        : business.claim_status === "claimed"
+                            ? "Trader-managed · verification pending"
+                            : "Community submitted · unclaimed"
+                ].filter(Boolean).join(" · ")
             });
         });
     }
@@ -1422,6 +1437,10 @@ const registerSwitch = document.getElementById("registerSwitch");
 const accountStatus = document.getElementById("accountStatus");
 const accountStatusText = document.getElementById("accountStatusText");
 const logoutButton = document.getElementById("logoutButton");
+const businessSubmission = document.getElementById("businessSubmission");
+const businessForm = document.getElementById("businessForm");
+const businessFormMessage = document.getElementById("businessFormMessage");
+const businessStreetSelect = document.getElementById("businessStreet");
 
 function setAuthMessage(message, isError = false) {
     if (!authMessage) return;
@@ -1486,47 +1505,25 @@ async function fetchContributorProfile(userId) {
 
 async function updateAccountStatus() {
     if (!karixClient || !accountStatus || !accountStatusText) return;
-
     const { data: { user }, error } = await karixClient.auth.getUser();
 
     if (error || !user) {
         accountStatus.hidden = true;
+        if (businessSubmission) businessSubmission.hidden = true;
         return;
     }
 
-    const profile = await fetchContributorProfile(user.id);
-
-    let statusText;
-
     if (!user.email_confirmed_at) {
-        statusText =
-            "Your email is not confirmed yet. Please check your inbox. Contributor approval is a separate step.";
-    } else if (!profile) {
-        statusText =
-            "Your email is confirmed, but your contributor profile could not be found. Please contact the KariX team.";
-    } else {
-        const status = String(profile.status || "pending").toLowerCase();
-
-        if (status === "active") {
-            statusText =
-                "Your email is confirmed and your contributor account is approved. You can contribute to KariX.";
-        } else if (status === "pending") {
-            statusText =
-                "Your email is confirmed. Your contributor application is waiting for KariX team approval.";
-        } else if (status === "suspended") {
-            statusText =
-                "Your contributor account is currently suspended. Please contact the KariX team.";
-        } else if (status === "rejected") {
-            statusText =
-                "Your contributor application was not approved. Please contact the KariX team if you need assistance.";
-        } else {
-            statusText =
-                "Your contributor status is being reviewed by the KariX team.";
-        }
+        accountStatusText.textContent = "Please confirm your email address before submitting or managing business profiles.";
+        accountStatus.hidden = false;
+        if (businessSubmission) businessSubmission.hidden = true;
+        return;
     }
 
-    accountStatusText.textContent = statusText;
+    accountStatusText.textContent = "Your KariX account is ready. Register your own shop or publish a community-discovered business. Community submissions are public immediately and remain unclaimed until the trader claims them.";
     accountStatus.hidden = false;
+    if (businessSubmission) businessSubmission.hidden = false;
+    populateBusinessStreetOptions();
 }
 
 async function handleRegisterSubmit(event) {
@@ -1562,7 +1559,7 @@ async function handleRegisterSubmit(event) {
         if (data?.user && !data.session) {
             registerForm.reset();
             setAuthMessage(
-                "Account created. Please confirm your email address, then wait for contributor approval.",
+                "Account created. Please confirm your email address, then log in to publish business profiles.",
                 false
             );
             setAuthMode("login");
@@ -1572,7 +1569,7 @@ async function handleRegisterSubmit(event) {
         if (data?.session) {
             registerForm.reset();
             setAuthMessage(
-                "Account created. Your contributor request is pending approval.",
+                "Account created. Your KariX account is ready. You can now publish business profiles.",
                 false
             );
             await updateAccountStatus();
@@ -1580,6 +1577,83 @@ async function handleRegisterSubmit(event) {
     } catch (error) {
         console.error("Registration failed:", error);
         setAuthMessage(error.message || "Registration failed. Please try again.", true);
+    }
+}
+
+function setBusinessFormMessage(message, isError = false) {
+    if (!businessFormMessage) return;
+    businessFormMessage.textContent = message || "";
+    businessFormMessage.style.color = isError ? "#8d2a2a" : "#203b52";
+}
+
+function populateBusinessStreetOptions() {
+    if (!businessStreetSelect) return;
+    const selected = businessStreetSelect.value;
+    businessStreetSelect.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Choose a published Kariakoo street";
+    businessStreetSelect.appendChild(placeholder);
+    allStreets.forEach(street => {
+        if (!street?.id || !street?.name) return;
+        const option = document.createElement("option");
+        option.value = street.id;
+        option.textContent = street.name;
+        businessStreetSelect.appendChild(option);
+    });
+    if (selected) businessStreetSelect.value = selected;
+}
+
+async function handleBusinessSubmit(event) {
+    event.preventDefault();
+    if (!karixClient) return setBusinessFormMessage("KariX is temporarily unavailable.", true);
+
+    const { data: { user }, error: userError } = await karixClient.auth.getUser();
+    if (userError || !user || !user.email_confirmed_at) {
+        return setBusinessFormMessage("Log in with a confirmed email address before publishing a business.", true);
+    }
+
+    const source = document.getElementById("businessSubmissionType").value;
+    const name = document.getElementById("businessName").value.trim();
+    const streetId = businessStreetSelect?.value;
+    if (!name || !streetId) return setBusinessFormMessage("Enter the business name and choose its street.", true);
+
+    const payload = {
+        business_name: name,
+        street_id: streetId,
+        business_type: document.getElementById("businessType").value,
+        shop_number: document.getElementById("businessShopNumber").value.trim() || null,
+        floor: document.getElementById("businessFloor").value.trim() || null,
+        phone: document.getElementById("businessPhone").value.trim() || null,
+        description: document.getElementById("businessDescription").value.trim() || null,
+        created_by: user.id,
+        status: "pending",
+        is_published: true,
+        submission_source: source,
+        claim_status: source === "trader" ? "claimed" : "unclaimed"
+    };
+
+    const button = document.getElementById("businessSubmitButton");
+    if (button) button.disabled = true;
+    setBusinessFormMessage("Publishing business profile...");
+    try {
+        const { data, error } = await karixClient.from("businesses")
+            .insert(payload)
+            .select("business_id, business_name")
+            .single();
+        if (error) throw error;
+
+        businessForm.reset();
+        populateBusinessStreetOptions();
+        setBusinessFormMessage(source === "trader"
+            ? "Your business is public. Your account has automatically received owner access. Verification is still pending."
+            : "The business is public as a community-submitted, unclaimed profile. The trader can claim it later.");
+        console.log("Published KariX business:", data?.business_id);
+    } catch (error) {
+        console.error("Business publishing failed:", error);
+        setBusinessFormMessage(error.message || "Could not publish this business.", true);
+    } finally {
+        if (button) button.disabled = false;
     }
 }
 
@@ -1671,6 +1745,9 @@ if (registerForm) {
 
 if (loginForm) {
     loginForm.addEventListener("submit", handleLoginSubmit);
+}
+if (businessForm) {
+    businessForm.addEventListener("submit", handleBusinessSubmit);
 }
 
 if (logoutButton) {
