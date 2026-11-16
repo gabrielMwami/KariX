@@ -293,6 +293,40 @@
                     </button>
                 </div>
 
+                <div id="businessSubmission" hidden>
+                    <hr>
+                    <h3>Add a Kariakoo business</h3>
+                    <p>Register your own shop or add a business you discovered. Community submissions appear publicly as unclaimed profiles.</p>
+                    <form id="businessForm">
+                        <label for="businessSubmissionType">What are you submitting?</label>
+                        <select id="businessSubmissionType" required>
+                            <option value="trader">My own business</option>
+                            <option value="community">A business I discovered</option>
+                        </select>
+                        <label for="businessName">Business name</label>
+                        <input id="businessName" type="text" required maxlength="160" placeholder="Shop or business name">
+                        <label for="businessStreet">Street</label>
+                        <select id="businessStreet" required><option value="">Choose a published Kariakoo street</option></select>
+                        <label for="businessType">Business type</label>
+                        <select id="businessType" required>
+                            <option value="retail">Retail</option><option value="wholesale">Wholesale</option>
+                            <option value="both">Wholesale and retail</option><option value="service">Service</option>
+                            <option value="manufacturer">Manufacturer</option><option value="other">Other</option>
+                        </select>
+                        <label for="businessShopNumber">Shop number (optional)</label>
+                        <input id="businessShopNumber" type="text" maxlength="80">
+                        <label for="businessFloor">Floor (optional)</label>
+                        <input id="businessFloor" type="text" maxlength="80">
+                        <label for="businessPhone">Business phone (optional)</label>
+                        <input id="businessPhone" type="tel" maxlength="40">
+                        <label for="businessDescription">Description (optional)</label>
+                        <textarea id="businessDescription" rows="3" maxlength="1000"></textarea>
+                        <button type="submit" id="businessSubmitButton">Publish business profile</button>
+                    </form>
+                    <p id="businessFormMessage" role="status" aria-live="polite"></p>
+                </div>
+
+
             </div>
 
         </section>
