@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trader workspace | KariX</title><meta name="description" content="Manage your KariX business and product listings.">
+<link rel="stylesheet" href="style.css">
+<style>
+:root{--ink:#182e3d;--muted:#71808a;--line:#e6ebee;--bg:#f5f7f8;--gold:#d4a64b}
+body{background:var(--bg);color:var(--ink)}.top{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 max(5%,calc((100% - 1240px)/2))}
+.brand{font-size:25px;font-weight:800;letter-spacing:-1px;color:var(--ink)}.brand span{color:var(--gold)}.top a:last-child{font-size:13px;font-weight:700}
+.shell{max-width:1240px;margin:34px auto;padding:0 22px 60px}.eyebrow{font-size:10px;font-weight:800;letter-spacing:1.2px;color:#946d27;text-transform:uppercase}
+.head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin:12px 0 24px}.head h1{font-size:clamp(27px,4vw,38px);letter-spacing:-1.2px;margin:5px 0}.head p{color:var(--muted);font-size:14px}
+.layout{display:grid;grid-template-columns:215px minmax(0,1fr);gap:20px}.side,.panel,.stat,.auth{background:#fff;border:1px solid var(--line);border-radius:12px}.side{padding:14px;height:max-content}
+.side h3{font-size:14px;margin:4px 0}.side p{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.nav{display:grid;gap:5px;margin-top:18px}.nav button{border:0;background:transparent;text-align:left;padding:11px;border-radius:7px;font-weight:700;color:#5c6971;cursor:pointer}.nav button.active,.nav button:hover{background:#f0f3f4;color:var(--ink)}
+.content{min-width:0}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:15px}.stat{padding:16px}.stat small{color:var(--muted);font-size:11px}.stat strong{display:block;font-size:24px;margin-top:6px}.panel{padding:19px;margin-bottom:15px}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}.panel h2{font-size:17px;margin:0}.muted{font-size:12px;color:var(--muted);margin-top:5px}
+.btn{background:var(--ink);color:#fff;border:0;border-radius:7px;padding:11px 15px;font-weight:700;cursor:pointer}.btn:disabled{opacity:.5;cursor:wait}.btn.secondary{background:#edf0f2;color:var(--ink)}
+.pill{display:inline-block;padding:5px 9px;border-radius:20px;background:#edf5ef;color:#27633d;font-size:10px;font-weight:800}
+.field{display:grid;gap:6px;font-size:11px;font-weight:700;color:#53616a}.field input,.field select,.field textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:7px;font:13px Arial;background:#fff;color:var(--ink)}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.form .wide{grid-column:1/-1}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:620px}th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:10px;border-bottom:1px solid var(--line)}td{font-size:12px;padding:12px 10px;border-bottom:1px solid #eff1f2}
+.row-actions{display:flex;gap:6px;align-items:center}.row-actions input,.row-actions select{max-width:105px;padding:7px;border:1px solid var(--line);border-radius:6px}
+.notice{font-size:12px;color:var(--muted);line-height:1.5}.message{font-size:12px;margin-top:10px;min-height:16px}.auth{max-width:430px;margin:28px auto;padding:24px}.auth h2{font-size:20px}.auth form{display:grid;gap:12px}.empty{padding:20px;border:1px dashed var(--line);border-radius:9px;color:var(--muted);font-size:13px;text-align:center}
+@media(max-width:740px){.layout{grid-template-columns:1fr}.nav{display:flex;overflow:auto;margin-top:8px}.nav button{white-space:nowrap}.side{padding:10px}.side .account{display:none}.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}.head{align-items:flex-start;flex-direction:column}}
+@media(max-width:480px){.shell{padding:0 12px 40px}.panel{padding:14px}.form{grid-template-columns:1fr}.form .wide{grid-column:auto}}
+</style></head>
+<body>
+<header class="top"><a class="brand" href="index.html">Kari<span>X</span>.</a><a href="index.html">← Back to discovery</a></header>
+<main class="shell">
+ <p class="eyebrow">KARIX BUSINESS TOOLS</p>
+ <div class="head"><div><h1>Your business, your shopfront.</h1><p>Manage your public business profile, product listings and stock.</p></div><span id="connectionBadge" class="pill">Connecting…</span></div>
+ <section id="authPanel" class="auth" hidden><h2>Log in to your trader account</h2><p class="notice">Use the same KariX account you use to register or manage your business.</p>
+ <form id="loginForm"><label class="field">Email address<input name="email" type="email" autocomplete="email" required></label><label class="field">Password<input name="password" type="password" autocomplete="current-password" required></label><button class="btn" type="submit">Log in</button></form><p id="authMessage" class="message" role="status"></p><p class="notice">New to KariX? <a href="index.html#contribute">Create an account on KariX</a>, then return here.</p></section>
+ <section id="workspace" class="layout" hidden>
+  <aside class="side"><div class="account"><h3 id="accountEmail">Trader account</h3><p id="businessCount">Loading businesses…</p></div><nav class="nav"><button class="active" data-tab="overview">Overview</button><button data-tab="products">Products & stock</button><button data-tab="profile">Business profile</button></nav><button id="logoutButton" class="btn secondary" style="width:100%;margin-top:15px">Log out</button></aside>
+  <div class="content">
+   <section id="overviewTab"><div class="stats"><div class="stat"><small>Businesses you manage</small><strong id="statBusinesses">—</strong></div><div class="stat"><small>Product listings</small><strong id="statListings">—</strong></div><div class="stat"><small>Available stock units</small><strong id="statStock">—</strong></div></div>
+    <section class="panel"><div class="panel-head"><div><h2>Your businesses</h2><p class="muted">Only businesses linked to your account appear here.</p></div></div><div id="businessCards" class="notice">Loading…</div></section>
+    <section class="panel"><div class="panel-head"><div><h2>Recent product listings</h2><p class="muted">Your live catalogue listings.</p></div><button class="btn" data-go="products">Manage products</button></div><div id="recentListings" class="table-wrap"></div></section>
+   </section>
+   <section id="productsTab" hidden><section class="panel"><div class="panel-head"><div><h2>Products & stock</h2><p class="muted">Add catalogue products and update availability.</p></div><select id="businessSelect" aria-label="Choose business" style="max-width:260px;padding:9px;border:1px solid var(--line);border-radius:7px"></select></div><div id="listingTable" class="table-wrap"></div></section>
+    <section class="panel"><div class="panel-head"><div><h2>Add product listing</h2><p class="muted">Select a product already in the KariX catalogue.</p></div></div>
+     <form id="listingForm" class="form"><label class="field">Catalogue product<select name="product_id" required></select></label><label class="field">Selling type<select name="selling_type"><option value="both">Wholesale & retail</option><option value="wholesale">Wholesale</option><option value="retail">Retail</option></select></label><label class="field">Minimum order quantity<input name="minimum_quantity" type="number" min="1" value="1" required></label><label class="field">Unit<input name="unit" value="piece" maxlength="40" required></label><label class="field">Quantity available<input name="quantity_available" type="number" min="0" placeholder="Leave blank if unknown"></label><label class="field">Availability<select name="availability_status"><option value="available">Available</option><option value="out_of_stock">Out of stock</option><option value="preorder">Pre-order</option><option value="unknown">Unknown</option></select></label><label class="field wide">Description (optional)<textarea name="listing_description" rows="2" maxlength="1000"></textarea></label><button class="btn wide" type="submit">Publish product listing</button></form><p id="listingMessage" class="message" role="status"></p>
+    </section>
+   </section>
+   <section id="profileTab" hidden><section class="panel"><div class="panel-head"><div><h2>Business profile</h2><p class="muted">Choose a business to view its public details.</p></div><select id="profileBusinessSelect" aria-label="Choose business" style="max-width:260px;padding:9px;border:1px solid var(--line);border-radius:7px"></select></div><div id="profileDetails" class="notice"></div></section></section>
+  </div>
+ </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script>
+<script>
+(function(){
+ const client=window.supabase?.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+ const el=id=>document.getElementById(id);
+ let user=null,businesses=[],products=[],activeBusinessId=null,listings=[];
+ const setMessage=(id,msg)=>{el(id).textContent=msg};
+ function tab(name){["overview","products","profile"].forEach(n=>el(n+"Tab").hidden=n!==name);document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b.dataset.tab===name))}
+ document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>tab(b.dataset.tab)));
+ document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>tab(b.dataset.go)));
+ function option(select,value,label){const o=document.createElement("option");o.value=value;o.textContent=label;select.appendChild(o)}
+ async function start(){
+  if(!client){el("connectionBadge").textContent="Configuration unavailable";return}
+  el("connectionBadge").textContent="Supabase connected";
+  const {data:{session}}=await client.auth.getSession();
+  if(session?.user) await loadWorkspace(session.user); else {el("authPanel").hidden=false;el("workspace").hidden=true}
+  client.auth.onAuthStateChange((_event,session)=>{if(session?.user)loadWorkspace(session.user);else{user=null;el("workspace").hidden=true;el("authPanel").hidden=false}});
+ }
+ async function loadWorkspace(currentUser){
+  user=currentUser;el("authPanel").hidden=true;el("workspace").hidden=false;el("accountEmail").textContent=user.email||"Trader account";
+  el("businessCards").textContent="Loading your businesses…";
+  const {data,error}=await client.from("business_memberships").select("membership_id,role,businesses(business_id,business_name,description,phone,whatsapp,website,shop_number,floor,opening_hours,status,is_published,claim_status,submission_source)").eq("user_id",user.id).eq("status","active");
+  if(error){el("businessCards").innerHTML='<div class="empty">Could not load trader businesses. Apply the KariX business-autonomy migration and check membership permissions. '+safe(error.message)+'</div>';el("businessCount").textContent="Database setup required";return}
+  businesses=(data||[]).map(x=>({...x.businesses,role:x.role})).filter(x=>x.business_id);
+  el("businessCount").textContent=businesses.length+" managed business(es)";
+  el("statBusinesses").textContent=businesses.length;
+  renderBusinessCards();
+  const ids=businesses.map(b=>b.business_id);
+  if(!ids.length){el("statListings").textContent="0";el("statStock").textContent="0";el("recentListings").innerHTML='<div class="empty">No managed business yet. Register your own shop on KariX or request a claim on an existing profile.</div>';el("listingTable").innerHTML='<div class="empty">Register or claim a business before managing products.</div>';return}
+  activeBusinessId=activeBusinessId&&ids.includes(activeBusinessId)?activeBusinessId:ids[0];
+  fillBusinessSelectors();
+  await loadCatalog();
+  await loadListings();
+ }
+ function safe(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+ function renderBusinessCards(){const box=el("businessCards");box.replaceChildren();if(!businesses.length){box.innerHTML='<div class="empty">No managed business found. Create a trader profile or claim an existing shop first.</div>';return}businesses.forEach(b=>{const card=document.createElement("div");card.style.cssText="padding:13px;border:1px solid var(--line);border-radius:8px;margin-bottom:9px";const name=document.createElement("strong");name.textContent=b.business_name;const meta=document.createElement("p");meta.className="muted";meta.textContent=[b.shop_number?"Shop "+b.shop_number:"",b.floor?"Floor "+b.floor:"",b.role,"Profile "+(b.is_published?"published":"not published"),b.status].filter(Boolean).join(" · ");card.append(name,meta);box.append(card)})}
+ function fillBusinessSelectors(){["businessSelect","profileBusinessSelect"].forEach(id=>{const s=el(id);s.replaceChildren();businesses.forEach(b=>option(s,b.business_id,b.business_name));s.value=activeBusinessId})}
+ async function loadCatalog(){const {data,error}=await client.from("products").select("product_id,product_name,brand").eq("is_active",true).order("product_name").limit(1000);if(error){setMessage("listingMessage","Could not load KariX catalogue: "+error.message);return}products=data||[];const select=el("listingForm").elements.product_id;select.replaceChildren();products.forEach(p=>option(select,p.product_id,[p.product_name,p.brand].filter(Boolean).join(" · ")));if(!products.length)option(select,"","No active catalogue products")}
+ async function loadListings(){
+  const {data,error}=await client.from("business_products").select("product_id,selling_type,minimum_quantity,unit,availability_status,quantity_available,listing_description,listing_status,created_at,products(product_name,brand)").eq("business_id",activeBusinessId).order("created_at",{ascending:false});
+  if(error){el("listingTable").innerHTML='<div class="empty">Could not load product listings. Check trader product permissions and migrations. '+safe(error.message)+'</div>';return}
+  listings=data||[];el("statListings").textContent=listings.filter(x=>x.listing_status==="active").length;
+  el("statStock").textContent=listings.reduce((n,x)=>n+(Number(x.quantity_available)||0),0);
+  renderListingTable();renderRecent();
+ }
+ function renderListingTable(){
+  const box=el("listingTable");if(!listings.length){box.innerHTML='<div class="empty">No products listed for this business yet. Add the first one below.</div>';return}
+  const table=document.createElement("table");table.innerHTML="<thead><tr><th>Product</th><th>Sale type</th><th>Minimum</th><th>Stock</th><th>Availability</th><th>Listing</th><th></th></tr></thead><tbody></tbody>";const body=table.querySelector("tbody");
+  listings.forEach(p=>{const tr=document.createElement("tr");const name=document.createElement("td");name.textContent=[p.products?.product_name||"Product",p.products?.brand].filter(Boolean).join(" · ");const sale=document.createElement("td");sale.textContent=p.selling_type;const min=document.createElement("td");min.textContent=p.minimum_quantity+" "+p.unit;const stock=document.createElement("td");const qty=document.createElement("input");qty.type="number";qty.min="0";qty.placeholder="Unknown";qty.value=p.quantity_available??"";qty.style.width="85px";stock.append(qty);const avail=document.createElement("td");const sel=document.createElement("select");[["available","Available"],["out_of_stock","Out of stock"],["preorder","Pre-order"],["discontinued","Discontinued"],["unknown","Unknown"]].forEach(([v,l])=>option(sel,v,l));sel.value=p.availability_status;avail.append(sel);const status=document.createElement("td");const state=document.createElement("select");[["active","Published"],["archived","Archived"]].forEach(([v,l])=>option(state,v,l));state.value=p.listing_status;status.append(state);const action=document.createElement("td");const save=document.createElement("button");save.className="btn";save.textContent="Save";save.addEventListener("click",async()=>{const raw=qty.value.trim(),number=raw===""?null:Number(raw);if(number!==null&&(!Number.isFinite(number)||number<0)){alert("Enter a valid stock quantity.");return}save.disabled=true;const {error}=await client.from("business_products").update({quantity_available:number,availability_status:sel.value,listing_status:state.value}).eq("business_id",activeBusinessId).eq("product_id",p.product_id);save.disabled=false;if(error){alert("Update failed: "+error.message);return}await loadListings()});action.append(save);tr.append(name,sale,min,stock,avail,status,action);body.append(tr)});
+  box.replaceChildren(table)
+ }
+ function renderRecent(){const box=el("recentListings");if(!listings.length){box.innerHTML='<div class="empty">No listings yet.</div>';return}const table=document.createElement("table");table.innerHTML="<thead><tr><th>Product</th><th>Stock</th><th>Availability</th><th>Status</th></tr></thead><tbody></tbody>";listings.slice(0,5).forEach(p=>{const tr=document.createElement("tr");[p.products?.product_name||"Product",p.quantity_available??"Not specified",p.availability_status,p.listing_status].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.append(td)});table.querySelector("tbody").append(tr)});box.replaceChildren(table)}
+ function renderProfile(){const b=businesses.find(x=>x.business_id===el("profileBusinessSelect").value);const box=el("profileDetails");if(!b){box.textContent="No business selected.";return}box.replaceChildren();[["Business name",b.business_name],["Description",b.description],["Phone",b.phone],["WhatsApp",b.whatsapp],["Website",b.website],["Shop",b.shop_number],["Floor",b.floor],["Opening hours",b.opening_hours],["Your role",b.role],["Publication",b.is_published?"Published":"Not published"],["Verification",b.status],["Claim",b.claim_status]].forEach(([k,v])=>{const p=document.createElement("p");p.textContent=k+": "+(v||"Not provided");box.append(p)})}
+ el("businessSelect").addEventListener("change",async e=>{activeBusinessId=e.target.value;fillBusinessSelectors();await loadListings()});
+ el("profileBusinessSelect").addEventListener("change",renderProfile);
+ el("listingForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.currentTarget,d=new FormData(f),raw=d.get("quantity_available").trim(),quantity=raw===""?null:Number(raw),minimum=Number(d.get("minimum_quantity")),unit=d.get("unit").trim();if(!activeBusinessId){setMessage("listingMessage","Select a managed business first.");return}if(!Number.isInteger(minimum)||minimum<1||!unit||(quantity!==null&&(!Number.isFinite(quantity)||quantity<0))){setMessage("listingMessage","Check minimum quantity, unit and stock.");return}const button=f.querySelector("button[type=submit]");button.disabled=true;setMessage("listingMessage","Publishing…");const {error}=await client.from("business_products").insert({business_id:activeBusinessId,product_id:d.get("product_id"),selling_type:d.get("selling_type"),minimum_quantity:minimum,unit,quantity_available:quantity,availability_status:d.get("availability_status"),listing_description:d.get("listing_description").trim()||null,listing_status:"active",created_by:user.id});button.disabled=false;if(error){setMessage("listingMessage","Could not publish: "+error.message);return}f.reset();f.elements.minimum_quantity.value="1";f.elements.unit.value="piece";setMessage("listingMessage","Product listing published.");await loadListings()});
+ el("loginForm").addEventListener("submit",async e=>{e.preventDefault();const f=e.currentTarget,b=f.querySelector("button");b.disabled=true;setMessage("authMessage","Signing in…");const {data,error}=await client.auth.signInWithPassword({email:f.elements.email.value.trim(),password:f.elements.password.value});b.disabled=false;if(error){setMessage("authMessage",error.message);return}await loadWorkspace(data.user)});
+ el("logoutButton").addEventListener("click",async()=>{await client.auth.signOut()});
+ start();
+})();
+</script></body></html>

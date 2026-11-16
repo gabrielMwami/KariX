@@ -780,10 +780,12 @@ async function openStreetExplorer(street) {
                 business_name,
                 description,
                 shop_number,
-                floor
+                floor,
+                status,
+                claim_status
             `)
             .eq("street_id", street.id)
-            .eq("status", "verified")
+            .eq("is_published", true)
     ]);
 
     if (content.dataset.streetId && content.dataset.streetId !== String(street.id)) {
@@ -859,6 +861,13 @@ async function openStreetExplorer(street) {
             name.textContent = business.business_name;
 
             const details = document.createElement("small");
+            const publicationStatus = document.createElement("small");
+            publicationStatus.className = "business-publication-status";
+            publicationStatus.textContent = business.status === "verified"
+                ? "Verified business"
+                : business.claim_status === "claimed"
+                    ? "Trader-managed · Verification pending"
+                    : "Community submitted · Unclaimed";
 
             const location = [
                 business.shop_number ? "Shop " + business.shop_number : "",
@@ -869,7 +878,7 @@ async function openStreetExplorer(street) {
                 [location, business.description].filter(Boolean).join(" · ") ||
                 "Verified Kariakoo business";
 
-            card.append(name, details);
+            card.append(name, details, publicationStatus);
             businessList.appendChild(card);
         });
     }
@@ -1129,8 +1138,8 @@ async function runSupabaseSearch(query) {
     // 4. SEARCH VERIFIED BUSINESSES
     const businessRequest = karixClient
         .from("businesses")
-        .select("business_id, business_name, description")
-        .eq("status", "verified")
+        .select("business_id, business_name, description, status, claim_status")
+        .eq("is_published", true)
         .ilike("business_name", term)
         .limit(8);
 
@@ -1239,15 +1248,21 @@ async function runSupabaseSearch(query) {
         });
     }
 
-    // VERIFIED BUSINESSES ONLY
+    // PUBLISHED BUSINESSES
     if (businessResponse.error) {
         console.error("Business search:", businessResponse.error.message);
     } else {
         (businessResponse.data || []).forEach(business => {
             results.push({
-                type: "Verified Business",
+                type: "Business",
                 title: business.business_name,
-                description: business.description || "Verified Kariakoo business."
+                description: [
+                    business.description,
+                    business.status === "verified" ? "Verified"
+                        : business.claim_status === "claimed"
+                            ? "Trader-managed · verification pending"
+                            : "Community submitted · unclaimed"
+                ].filter(Boolean).join(" · ")
             });
         });
     }
@@ -1422,6 +1437,18 @@ const registerSwitch = document.getElementById("registerSwitch");
 const accountStatus = document.getElementById("accountStatus");
 const accountStatusText = document.getElementById("accountStatusText");
 const logoutButton = document.getElementById("logoutButton");
+const businessSubmission = document.getElementById("businessSubmission");
+const businessForm = document.getElementById("businessForm");
+const businessFormMessage = document.getElementById("businessFormMessage");
+const businessStreetSelect = document.getElementById("businessStreet");
+const traderDashboard = document.getElementById("traderDashboard");
+const traderBusinessList = document.getElementById("traderBusinessList");
+const businessClaimForm = document.getElementById("businessClaimForm");
+const claimBusinessSelect = document.getElementById("claimBusinessSelect");
+const claimFormMessage = document.getElementById("claimFormMessage");
+const myBusinessClaims = document.getElementById("myBusinessClaims");
+let traderProductCatalog = [];
+let currentTraderUserId = null;
 
 function setAuthMessage(message, isError = false) {
     if (!authMessage) return;
@@ -1486,47 +1513,27 @@ async function fetchContributorProfile(userId) {
 
 async function updateAccountStatus() {
     if (!karixClient || !accountStatus || !accountStatusText) return;
-
     const { data: { user }, error } = await karixClient.auth.getUser();
 
     if (error || !user) {
         accountStatus.hidden = true;
+        if (businessSubmission) businessSubmission.hidden = true;
         return;
     }
 
-    const profile = await fetchContributorProfile(user.id);
-
-    let statusText;
-
     if (!user.email_confirmed_at) {
-        statusText =
-            "Your email is not confirmed yet. Please check your inbox. Contributor approval is a separate step.";
-    } else if (!profile) {
-        statusText =
-            "Your email is confirmed, but your contributor profile could not be found. Please contact the KariX team.";
-    } else {
-        const status = String(profile.status || "pending").toLowerCase();
-
-        if (status === "active") {
-            statusText =
-                "Your email is confirmed and your contributor account is approved. You can contribute to KariX.";
-        } else if (status === "pending") {
-            statusText =
-                "Your email is confirmed. Your contributor application is waiting for KariX team approval.";
-        } else if (status === "suspended") {
-            statusText =
-                "Your contributor account is currently suspended. Please contact the KariX team.";
-        } else if (status === "rejected") {
-            statusText =
-                "Your contributor application was not approved. Please contact the KariX team if you need assistance.";
-        } else {
-            statusText =
-                "Your contributor status is being reviewed by the KariX team.";
-        }
+        accountStatusText.textContent = "Please confirm your email address before submitting or managing business profiles.";
+        accountStatus.hidden = false;
+        if (businessSubmission) businessSubmission.hidden = true;
+        return;
     }
 
-    accountStatusText.textContent = statusText;
+    accountStatusText.textContent = "Your KariX account is ready. Register your own shop or publish a community-discovered business. Community submissions are public immediately and remain unclaimed until the trader claims them.";
     accountStatus.hidden = false;
+    if (businessSubmission) businessSubmission.hidden = false;
+    if (traderDashboard) traderDashboard.hidden = false;
+    populateBusinessStreetOptions();
+    await loadTraderDashboard(user.id);
 }
 
 async function handleRegisterSubmit(event) {
@@ -1562,7 +1569,7 @@ async function handleRegisterSubmit(event) {
         if (data?.user && !data.session) {
             registerForm.reset();
             setAuthMessage(
-                "Account created. Please confirm your email address, then wait for contributor approval.",
+                "Account created. Please confirm your email address, then log in to publish business profiles.",
                 false
             );
             setAuthMode("login");
@@ -1572,7 +1579,7 @@ async function handleRegisterSubmit(event) {
         if (data?.session) {
             registerForm.reset();
             setAuthMessage(
-                "Account created. Your contributor request is pending approval.",
+                "Account created. Your KariX account is ready. You can now publish business profiles.",
                 false
             );
             await updateAccountStatus();
@@ -1580,6 +1587,550 @@ async function handleRegisterSubmit(event) {
     } catch (error) {
         console.error("Registration failed:", error);
         setAuthMessage(error.message || "Registration failed. Please try again.", true);
+    }
+}
+
+function setBusinessFormMessage(message, isError = false) {
+    if (!businessFormMessage) return;
+    businessFormMessage.textContent = message || "";
+    businessFormMessage.style.color = isError ? "#8d2a2a" : "#203b52";
+}
+
+function populateBusinessStreetOptions() {
+    if (!businessStreetSelect) return;
+    const selected = businessStreetSelect.value;
+    businessStreetSelect.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Choose a published Kariakoo street";
+    businessStreetSelect.appendChild(placeholder);
+    allStreets.forEach(street => {
+        if (!street?.id || !street?.name) return;
+        const option = document.createElement("option");
+        option.value = street.id;
+        option.textContent = street.name;
+        businessStreetSelect.appendChild(option);
+    });
+    if (selected) businessStreetSelect.value = selected;
+}
+
+
+function setClaimMessage(message, isError = false) {
+    if (!claimFormMessage) return;
+    claimFormMessage.textContent = message || "";
+    claimFormMessage.style.color = isError ? "#8d2a2a" : "#203b52";
+}
+
+async function loadTraderProductCatalog() {
+    const { data, error } = await karixClient
+        .from("products")
+        .select("product_id, product_name, brand, model_number")
+        .eq("is_active", true)
+        .order("product_name")
+        .limit(500);
+
+    if (error) {
+        console.error("Trader catalogue load failed:", error);
+        traderProductCatalog = [];
+        return;
+    }
+    traderProductCatalog = data || [];
+}
+
+function traderInput(labelText, name, value, type) {
+    const label = document.createElement("label");
+    label.className = "trader-field";
+    label.appendChild(document.createTextNode(labelText));
+    const input = document.createElement("input");
+    input.type = type || "text";
+    input.name = name;
+    input.value = value == null ? "" : value;
+    if (input.type === "number") {
+        input.min = "0";
+        input.step = "any";
+    }
+    label.appendChild(input);
+    return label;
+}
+
+function traderSelect(labelText, name, options, selected) {
+    const label = document.createElement("label");
+    label.className = "trader-field";
+    label.appendChild(document.createTextNode(labelText));
+    const select = document.createElement("select");
+    select.name = name;
+    options.forEach(entry => {
+        const option = document.createElement("option");
+        option.value = entry[0];
+        option.textContent = entry[1];
+        select.appendChild(option);
+    });
+    select.value = selected;
+    label.appendChild(select);
+    return label;
+}
+
+async function renderTraderProductPanel(business, card) {
+    const section = document.createElement("section");
+    section.className = "trader-products-section";
+
+    const heading = document.createElement("h4");
+    heading.textContent = "Products and stock";
+    const intro = document.createElement("p");
+    intro.textContent = "Publish products from the KariX catalogue and update their stock and availability.";
+    const form = document.createElement("form");
+    form.className = "trader-product-add-form";
+
+    const catalogueOptions = traderProductCatalog.map(product => [
+        product.product_id,
+        [product.product_name, product.brand].filter(Boolean).join(" · ")
+    ]);
+    form.appendChild(traderSelect("Catalogue product", "product_id", catalogueOptions, catalogueOptions[0]?.[0] || ""));
+    form.appendChild(traderSelect("Selling type", "selling_type", [
+        ["retail", "Retail"], ["wholesale", "Wholesale"], ["both", "Wholesale and retail"]
+    ], "both"));
+    form.appendChild(traderInput("Minimum order quantity", "minimum_quantity", "1", "number"));
+    form.appendChild(traderInput("Unit (piece, box, carton etc.)", "unit", "piece"));
+    form.appendChild(traderSelect("Availability", "availability_status", [
+        ["available", "Available"], ["out_of_stock", "Out of stock"],
+        ["preorder", "Pre-order"], ["discontinued", "Discontinued"], ["unknown", "Unknown"]
+    ], "available"));
+    form.appendChild(traderInput("Quantity available (optional)", "quantity_available", "", "number"));
+
+    const descriptionLabel = document.createElement("label");
+    descriptionLabel.className = "trader-field";
+    descriptionLabel.appendChild(document.createTextNode("Listing description (optional)"));
+    const description = document.createElement("textarea");
+    description.name = "listing_description";
+    description.rows = 2;
+    description.maxLength = 1000;
+    descriptionLabel.appendChild(description);
+    form.appendChild(descriptionLabel);
+
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.textContent = "Publish product listing";
+    const message = document.createElement("p");
+    message.className = "trader-business-message";
+    message.setAttribute("role", "status");
+    form.append(submit, message);
+
+    const listingContainer = document.createElement("div");
+    listingContainer.className = "trader-listings-list";
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!catalogueOptions.length) {
+            message.textContent = "No active products are available in the KariX catalogue yet.";
+            return;
+        }
+        const minimum = Number(form.elements.minimum_quantity.value);
+        const quantityText = form.elements.quantity_available.value.trim();
+        const quantity = quantityText === "" ? null : Number(quantityText);
+        const unit = form.elements.unit.value.trim();
+        if (!Number.isFinite(minimum) || minimum <= 0 ||
+            (quantity !== null && (!Number.isFinite(quantity) || quantity < 0)) || !unit) {
+            message.textContent = "Enter a valid minimum quantity, unit and stock quantity.";
+            return;
+        }
+
+        submit.disabled = true;
+        message.textContent = "Publishing listing...";
+        try {
+            const productId = form.elements.product_id.value;
+            const { data: existing, error: lookupError } = await karixClient
+                .from("business_products")
+                .select("product_id")
+                .eq("business_id", business.business_id)
+                .eq("product_id", productId)
+                .maybeSingle();
+            if (lookupError) throw lookupError;
+            if (existing) throw new Error("This product is already listed. Update its existing listing below.");
+
+            const { error } = await karixClient.from("business_products").insert({
+                business_id: business.business_id,
+                product_id: productId,
+                selling_type: form.elements.selling_type.value,
+                minimum_quantity: minimum,
+                unit,
+                availability_status: form.elements.availability_status.value,
+                quantity_available: quantity,
+                listing_description: form.elements.listing_description.value.trim() || null,
+                listing_status: "active",
+                created_by: currentTraderUserId
+            });
+            if (error) throw error;
+            form.reset();
+            form.elements.minimum_quantity.value = "1";
+            form.elements.unit.value = "piece";
+            message.textContent = "Product listing published.";
+            await loadTraderProductListings(business.business_id, listingContainer);
+        } catch (error) {
+            console.error("Product listing publish failed:", error);
+            message.textContent = error.message || "Could not publish this listing.";
+        } finally {
+            submit.disabled = false;
+        }
+    });
+
+    section.append(heading, intro, form, listingContainer);
+    card.appendChild(section);
+    await loadTraderProductListings(business.business_id, listingContainer);
+}
+
+async function loadTraderProductListings(businessId, container) {
+    const { data, error } = await karixClient
+        .from("business_products")
+        .select("product_id, selling_type, minimum_quantity, unit, availability_status, quantity_available, listing_description, listing_status, products(product_name, brand)")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false });
+
+    container.replaceChildren();
+    if (error) {
+        console.error("Trader listings load failed:", error);
+        container.textContent = "Could not load listings. Apply the trader product-management migration first.";
+        return;
+    }
+    if (!data?.length) {
+        container.textContent = "No products listed for this business yet.";
+        return;
+    }
+
+    data.forEach(listing => {
+        const item = document.createElement("article");
+        item.className = "trader-listing-card";
+        const title = document.createElement("strong");
+        title.textContent = listing.products?.product_name || "Catalogue product";
+        const meta = document.createElement("p");
+        meta.textContent = [
+            listing.products?.brand,
+            listing.selling_type,
+            "Minimum " + listing.minimum_quantity + " " + listing.unit,
+            listing.quantity_available == null ? "Stock not specified" : "Stock: " + listing.quantity_available,
+            listing.availability_status,
+            listing.listing_status
+        ].filter(Boolean).join(" · ");
+
+        const edit = document.createElement("form");
+        edit.className = "trader-listing-edit-form";
+        edit.appendChild(traderSelect("Availability", "availability_status", [
+            ["available", "Available"], ["out_of_stock", "Out of stock"],
+            ["preorder", "Pre-order"], ["discontinued", "Discontinued"], ["unknown", "Unknown"]
+        ], listing.availability_status));
+        edit.appendChild(traderInput("Quantity available", "quantity_available", listing.quantity_available, "number"));
+        edit.appendChild(traderSelect("Listing status", "listing_status", [
+            ["active", "Published"], ["archived", "Archived"]
+        ], listing.listing_status === "archived" ? "archived" : "active"));
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.textContent = "Update stock";
+        const status = document.createElement("small");
+        edit.append(save, status);
+        edit.addEventListener("submit", async event => {
+            event.preventDefault();
+            const raw = edit.elements.quantity_available.value.trim();
+            const qty = raw === "" ? null : Number(raw);
+            if (qty !== null && (!Number.isFinite(qty) || qty < 0)) {
+                status.textContent = "Enter a valid stock quantity.";
+                return;
+            }
+            save.disabled = true;
+            status.textContent = "Updating...";
+            try {
+                const { error: updateError } = await karixClient
+                    .from("business_products")
+                    .update({
+                        availability_status: edit.elements.availability_status.value,
+                        quantity_available: qty,
+                        listing_status: edit.elements.listing_status.value
+                    })
+                    .eq("business_id", businessId)
+                    .eq("product_id", listing.product_id);
+                if (updateError) throw updateError;
+                status.textContent = "Stock updated.";
+                meta.textContent = [
+                    listing.products?.brand,
+                    listing.selling_type,
+                    "Minimum " + listing.minimum_quantity + " " + listing.unit,
+                    qty == null ? "Stock not specified" : "Stock: " + qty,
+                    edit.elements.availability_status.value,
+                    edit.elements.listing_status.value
+                ].filter(Boolean).join(" · ");
+            } catch (updateError) {
+                console.error("Stock update failed:", updateError);
+                status.textContent = updateError.message || "Could not update stock.";
+            } finally {
+                save.disabled = false;
+            }
+        });
+        item.append(title, meta, edit);
+        container.appendChild(item);
+    });
+}
+
+function renderTraderBusinesses(rows) {
+    if (!traderBusinessList) return;
+    traderBusinessList.replaceChildren();
+
+    if (!rows?.length) {
+        traderBusinessList.textContent = "You do not manage any businesses yet. Register your own shop above or claim an existing listing.";
+        return;
+    }
+
+    rows.forEach(row => {
+        const business = row.businesses;
+        if (!business) return;
+
+        const card = document.createElement("article");
+        card.className = "trader-business-card";
+
+        const heading = document.createElement("h4");
+        heading.textContent = business.business_name;
+        const role = document.createElement("p");
+        role.textContent = "Your role: " + row.role + " · " +
+            (business.status === "verified" ? "Verified" : "Verification pending");
+
+        const form = document.createElement("form");
+        form.className = "trader-business-edit-form";
+        form.dataset.businessId = business.business_id;
+
+        const fields = [
+            ["Business name", "business_name", business.business_name || "", "input"],
+            ["Description", "description", business.description || "", "textarea"],
+            ["Business phone", "phone", business.phone || "", "input"],
+            ["WhatsApp", "whatsapp", business.whatsapp || "", "input"],
+            ["Website", "website", business.website || "", "input"],
+            ["Shop number", "shop_number", business.shop_number || "", "input"],
+            ["Floor", "floor", business.floor || "", "input"],
+            ["Opening hours", "opening_hours", business.opening_hours || "", "input"]
+        ];
+
+        fields.forEach(([labelText, field, value, type]) => {
+            const label = document.createElement("label");
+            label.textContent = labelText;
+            const control = document.createElement(type === "textarea" ? "textarea" : "input");
+            control.name = field;
+            control.value = value;
+            if (type === "textarea") control.rows = 2;
+            form.append(label, control);
+        });
+
+        const save = document.createElement("button");
+        save.type = "submit";
+        save.textContent = "Save business details";
+        form.appendChild(save);
+
+        const message = document.createElement("p");
+        message.className = "trader-business-message";
+        message.setAttribute("role", "status");
+        form.appendChild(message);
+
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+            save.disabled = true;
+            message.textContent = "Saving...";
+            const payload = {};
+            fields.forEach(([, field]) => {
+                payload[field] = form.elements[field].value.trim() || null;
+            });
+            try {
+                const { error } = await karixClient.from("businesses")
+                    .update(payload)
+                    .eq("business_id", business.business_id);
+                if (error) throw error;
+                message.textContent = "Business details saved.";
+            } catch (error) {
+                console.error("Business update failed:", error);
+                message.textContent = error.message || "Could not save business details.";
+            } finally {
+                save.disabled = false;
+            }
+        });
+
+        card.append(heading, role, form);
+        traderBusinessList.appendChild(card);
+        renderTraderProductPanel(business, card).catch(error => {
+            console.error("Trader product panel failed:", error);
+        });
+    });
+}
+
+async function loadTraderDashboard(userId) {
+    if (!karixClient || !userId) return;
+
+    if (traderBusinessList) traderBusinessList.textContent = "Loading your businesses...";
+    const { data: memberships, error } = await karixClient
+        .from("business_memberships")
+        .select("membership_id, role, businesses(business_id, business_name, description, phone, whatsapp, website, shop_number, floor, opening_hours, status)")
+        .eq("user_id", userId)
+        .eq("status", "active");
+
+    if (error) {
+        console.error("Trader business load failed:", error);
+        if (traderBusinessList) traderBusinessList.textContent =
+            "Could not load your businesses. Confirm the KariX business-autonomy database migration has been applied.";
+    } else {
+        currentTraderUserId = userId;
+        await loadTraderProductCatalog();
+        renderTraderBusinesses(memberships || []);
+    }
+
+    await loadClaimableBusinesses();
+    await loadMyBusinessClaims(userId);
+}
+
+async function loadClaimableBusinesses() {
+    if (!karixClient || !claimBusinessSelect) return;
+    claimBusinessSelect.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Choose an unclaimed business";
+    claimBusinessSelect.appendChild(placeholder);
+
+    const { data, error } = await karixClient.from("businesses")
+        .select("business_id, business_name, shop_number, floor")
+        .eq("is_published", true)
+        .eq("claim_status", "unclaimed")
+        .order("business_name")
+        .limit(500);
+
+    if (error) {
+        console.error("Claimable businesses load failed:", error);
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Could not load listings. Database migration may not be applied.";
+        claimBusinessSelect.appendChild(option);
+        return;
+    }
+
+    (data || []).forEach(business => {
+        const option = document.createElement("option");
+        option.value = business.business_id;
+        option.textContent = [
+            business.business_name,
+            business.shop_number ? "Shop " + business.shop_number : "",
+            business.floor ? "Floor " + business.floor : ""
+        ].filter(Boolean).join(" · ");
+        claimBusinessSelect.appendChild(option);
+    });
+}
+
+async function loadMyBusinessClaims(userId) {
+    if (!karixClient || !myBusinessClaims) return;
+    myBusinessClaims.textContent = "Loading claims...";
+    const { data, error } = await karixClient.from("business_claims")
+        .select("claim_id, status, review_notes, created_at, businesses(business_name)")
+        .eq("claimant_id", userId)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Business claims load failed:", error);
+        myBusinessClaims.textContent = "Could not load ownership claims.";
+        return;
+    }
+
+    myBusinessClaims.replaceChildren();
+    if (!data?.length) {
+        myBusinessClaims.textContent = "You have not submitted any ownership claims.";
+        return;
+    }
+
+    data.forEach(claim => {
+        const item = document.createElement("p");
+        const businessName = claim.businesses?.business_name || "Business";
+        item.textContent = businessName + " — " + claim.status.replace("_", " ") +
+            (claim.review_notes ? " · " + claim.review_notes : "");
+        myBusinessClaims.appendChild(item);
+    });
+}
+
+async function handleBusinessClaimSubmit(event) {
+    event.preventDefault();
+    if (!karixClient) return setClaimMessage("KariX is temporarily unavailable.", true);
+
+    const { data: { user }, error: userError } = await karixClient.auth.getUser();
+    if (userError || !user || !user.email_confirmed_at) {
+        return setClaimMessage("Log in with a confirmed email address before claiming a business.", true);
+    }
+
+    const businessId = claimBusinessSelect?.value;
+    const evidenceText = document.getElementById("claimEvidence").value.trim();
+    if (!businessId || !evidenceText) {
+        return setClaimMessage("Choose a business and explain how KariX can verify your connection to it.", true);
+    }
+
+    const button = document.getElementById("claimBusinessButton");
+    if (button) button.disabled = true;
+    setClaimMessage("Submitting ownership claim...");
+    try {
+        const { error } = await karixClient.from("business_claims").insert({
+            business_id: businessId,
+            claimant_id: user.id,
+            evidence: { explanation: evidenceText },
+            status: "pending"
+        });
+        if (error) throw error;
+        businessClaimForm.reset();
+        setClaimMessage("Claim submitted. The business remains publicly visible, but ownership changes only after KariX verifies your claim.");
+        await loadMyBusinessClaims(user.id);
+    } catch (error) {
+        console.error("Business claim failed:", error);
+        setClaimMessage(error.message || "Could not submit the ownership claim.", true);
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+async function handleBusinessSubmit(event) {
+    event.preventDefault();
+    if (!karixClient) return setBusinessFormMessage("KariX is temporarily unavailable.", true);
+
+    const { data: { user }, error: userError } = await karixClient.auth.getUser();
+    if (userError || !user || !user.email_confirmed_at) {
+        return setBusinessFormMessage("Log in with a confirmed email address before publishing a business.", true);
+    }
+
+    const source = document.getElementById("businessSubmissionType").value;
+    const name = document.getElementById("businessName").value.trim();
+    const streetId = businessStreetSelect?.value;
+    if (!name || !streetId) return setBusinessFormMessage("Enter the business name and choose its street.", true);
+
+    const payload = {
+        business_name: name,
+        street_id: streetId,
+        business_type: document.getElementById("businessType").value,
+        shop_number: document.getElementById("businessShopNumber").value.trim() || null,
+        floor: document.getElementById("businessFloor").value.trim() || null,
+        phone: document.getElementById("businessPhone").value.trim() || null,
+        description: document.getElementById("businessDescription").value.trim() || null,
+        created_by: user.id,
+        status: "pending",
+        is_published: true,
+        submission_source: source,
+        claim_status: source === "trader" ? "claimed" : "unclaimed"
+    };
+
+    const button = document.getElementById("businessSubmitButton");
+    if (button) button.disabled = true;
+    setBusinessFormMessage("Publishing business profile...");
+    try {
+        const { data, error } = await karixClient.from("businesses")
+            .insert(payload)
+            .select("business_id, business_name")
+            .single();
+        if (error) throw error;
+
+        businessForm.reset();
+        populateBusinessStreetOptions();
+        setBusinessFormMessage(source === "trader"
+            ? "Your business is public. Your account has automatically received owner access. Verification is still pending."
+            : "The business is public as a community-submitted, unclaimed profile. The trader can claim it later.");
+        console.log("Published KariX business:", data?.business_id);
+    } catch (error) {
+        console.error("Business publishing failed:", error);
+        setBusinessFormMessage(error.message || "Could not publish this business.", true);
+    } finally {
+        if (button) button.disabled = false;
     }
 }
 
@@ -1672,6 +2223,12 @@ if (registerForm) {
 if (loginForm) {
     loginForm.addEventListener("submit", handleLoginSubmit);
 }
+if (businessForm) {
+    businessForm.addEventListener("submit", handleBusinessSubmit);
+}
+if (businessClaimForm) {
+    businessClaimForm.addEventListener("submit", handleBusinessClaimSubmit);
+}
 
 if (logoutButton) {
     logoutButton.addEventListener("click", handleLogout);
@@ -1687,6 +2244,8 @@ if (karixClient && karixClient.auth) {
             }
         } else if (accountStatus) {
             accountStatus.hidden = true;
+            if (businessSubmission) businessSubmission.hidden = true;
+            if (traderDashboard) traderDashboard.hidden = true;
         }
     });
 }

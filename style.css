@@ -802,3 +802,117 @@ footer small {
         text-align: center;
     }
 }
+
+/* ==================================
+   KARIX TRADER PRODUCT MANAGEMENT
+================================== */
+
+.auth-card select,
+.auth-card textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d8dce3;
+    border-radius: 7px;
+    font: inherit;
+    background: #fff;
+    color: var(--navy);
+}
+
+.trader-business-card {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.trader-business-card h4 {
+    margin: 0 0 8px;
+}
+
+.trader-business-edit-form,
+.trader-product-add-form,
+.trader-listing-edit-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.trader-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.trader-field input,
+.trader-field select,
+.trader-field textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #d8dce3;
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 400;
+}
+
+.trader-business-edit-form button,
+.trader-product-add-form button,
+.trader-listing-edit-form button {
+    align-self: end;
+    padding: 12px 15px;
+    border: 0;
+    border-radius: 7px;
+    background: #14243a;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.trader-products-section {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.trader-products-section > p {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.trader-listings-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.trader-listing-card {
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: #fafbfc;
+}
+
+.trader-listing-card > p {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.trader-business-message {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    .trader-business-edit-form,
+    .trader-product-add-form,
+    .trader-listing-edit-form {
+        grid-template-columns: 1fr;
+    }
+}
