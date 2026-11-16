@@ -1447,6 +1447,8 @@ const businessClaimForm = document.getElementById("businessClaimForm");
 const claimBusinessSelect = document.getElementById("claimBusinessSelect");
 const claimFormMessage = document.getElementById("claimFormMessage");
 const myBusinessClaims = document.getElementById("myBusinessClaims");
+let traderProductCatalog = [];
+let currentTraderUserId = null;
 
 function setAuthMessage(message, isError = false) {
     if (!authMessage) return;
@@ -1718,6 +1720,8 @@ async function loadTraderDashboard(userId) {
         if (traderBusinessList) traderBusinessList.textContent =
             "Could not load your businesses. Confirm the KariX business-autonomy database migration has been applied.";
     } else {
+        currentTraderUserId = userId;
+        await loadTraderProductCatalog();
         renderTraderBusinesses(memberships || []);
     }
 
